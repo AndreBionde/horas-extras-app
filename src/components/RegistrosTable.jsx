@@ -1,4 +1,5 @@
-import { Calendar, Trash2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Calendar, Trash2, AlertTriangle } from "lucide-react";
 import { DateUtils } from "../utils/dateUtils";
 import { JORNADA_PADRAO } from "../utils/dateUtils";
 
@@ -8,6 +9,25 @@ const RegistrosTable = ({
   onRemoverRegistro,
   onHandleTimeChange,
 }) => {
+  const [alertas, setAlertas] = useState({});
+
+  // Validar horários em tempo real
+  useEffect(() => {
+    const novosAlertas = {};
+    registrosMes.forEach((registro) => {
+      if (registro.entrada && registro.saida) {
+        const validacao = DateUtils.validarHorarios(
+          registro.entrada,
+          registro.saida
+        );
+        if (!validacao.valido) {
+          novosAlertas[registro.id] = validacao.mensagem;
+        }
+      }
+    });
+    setAlertas(novosAlertas);
+  }, [registrosMes]);
+
   return (
     <div className="table-card fade-in">
       <div className="table-wrapper">
@@ -40,7 +60,6 @@ const RegistrosTable = ({
                   registro.saida
                 );
 
-                // CORREÇÃO: Só calcular diferença se houver horas trabalhadas
                 let diferenca = 0;
                 let mostrarResultado = false;
 
@@ -49,21 +68,28 @@ const RegistrosTable = ({
                   mostrarResultado = true;
                 }
 
+                const hasAlert = alertas[registro.id];
+
                 return (
-                  <tr key={registro.id}>
+                  <tr key={registro.id} className={hasAlert ? "row-alert" : ""}>
                     <td>
-                      <input
-                        type="date"
-                        value={registro.data}
-                        onChange={(e) =>
-                          onAtualizarRegistro(
-                            registro.id,
-                            "data",
-                            e.target.value
-                          )
-                        }
-                        className="input"
-                      />
+                      <div className="input-with-alert">
+                        <input
+                          type="date"
+                          value={registro.data}
+                          onChange={(e) =>
+                            onAtualizarRegistro(
+                              registro.id,
+                              "data",
+                              e.target.value
+                            )
+                          }
+                          className="input"
+                        />
+                        {hasAlert && (
+                          <AlertTriangle size={16} className="alert-icon" />
+                        )}
+                      </div>
                     </td>
 
                     <td>
@@ -119,17 +145,22 @@ const RegistrosTable = ({
 
                     <td>
                       {mostrarResultado ? (
-                        <span
-                          className={`badge ${
-                            diferenca > 0
-                              ? "green"
-                              : diferenca < 0
-                              ? "red"
-                              : "gray"
-                          }`}
-                        >
-                          {DateUtils.formatarMinutos(diferenca)}
-                        </span>
+                        <>
+                          <span
+                            className={`badge ${
+                              diferenca > 0
+                                ? "green"
+                                : diferenca < 0
+                                ? "red"
+                                : "gray"
+                            }`}
+                          >
+                            {DateUtils.formatarMinutos(diferenca)}
+                          </span>
+                          {hasAlert && (
+                            <div className="alert-message">{hasAlert}</div>
+                          )}
+                        </>
                       ) : (
                         <span className="badge gray">0:00h</span>
                       )}

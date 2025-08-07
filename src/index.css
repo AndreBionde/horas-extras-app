@@ -838,6 +838,93 @@ body::before {
   transform: translateY(0);
 }
 
+/* Estilos para alertas na tabela */
+.row-alert {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.input-with-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alert-icon {
+  color: #f87171;
+  flex-shrink: 0;
+}
+
+.alert-message {
+  font-size: 0.7rem;
+  color: #f87171;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+/* Estilos para subtitle nos cards */
+.summary-subtitle {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 0.5rem;
+  display: block;
+}
+
+/* Melhorias nos botões de ação */
+.controls-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  border: none;
+  border-radius: 1rem;
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.btn-info {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+}
+
+.btn-success:hover,
+.btn-info:hover {
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .controls-wrapper {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .controls-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .btn {
+    flex: 1;
+    justify-content: center;
+    min-width: auto;
+  }
+}
+
 /* RESPONSIVO MELHORADO */
 @media (max-width: 1024px) {
   .main-container {

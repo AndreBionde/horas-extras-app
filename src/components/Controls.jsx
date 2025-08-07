@@ -1,4 +1,5 @@
-import { Plus } from "lucide-react";
+import React from "react";
+import { Plus, Download, Upload, Trash2 } from "lucide-react";
 import { MESES } from "../utils/dateUtils";
 import { DateUtils } from "../utils/dateUtils";
 
@@ -8,17 +9,17 @@ const Controls = ({
   anoAtual,
   setAnoAtual,
   onAdicionarRegistro,
-  diasTrabalhados, // Prop para receber os dias já trabalhados
+  diasTrabalhados,
+  onExportarDados,
+  onImportarDados,
+  onLimparDados,
 }) => {
   const anos = Array.from(
     { length: 10 },
     (_, i) => new Date().getFullYear() - 2 + i
   );
 
-  // Calcular dias úteis do mês atual
   const diasUteis = DateUtils.obterDiasUteis(mesAtual, anoAtual);
-
-  // Verificar se pode adicionar mais dias
   const podeAdicionarDia = diasTrabalhados < diasUteis;
 
   const handleAdicionarRegistro = () => {
@@ -64,21 +65,58 @@ const Controls = ({
             </div>
           </div>
 
-          <button
-            onClick={handleAdicionarRegistro}
-            className="add-button"
-            disabled={!podeAdicionarDia}
-            title={
-              !podeAdicionarDia
-                ? `Limite de ${diasUteis} dias úteis atingido`
-                : "Adicionar novo dia"
-            }
-          >
-            <Plus size={20} />
-            {podeAdicionarDia
-              ? "Adicionar Dia"
-              : `Limite Atingido (${diasTrabalhados}/${diasUteis})`}
-          </button>
+          <div className="controls-actions">
+            <button
+              onClick={handleAdicionarRegistro}
+              className="add-button"
+              disabled={!podeAdicionarDia}
+              title={
+                !podeAdicionarDia
+                  ? `Limite de ${diasUteis} dias úteis atingido`
+                  : "Adicionar novo dia"
+              }
+            >
+              <Plus size={20} />
+              {podeAdicionarDia
+                ? "Adicionar Dia"
+                : `Limite (${diasTrabalhados}/${diasUteis})`}
+            </button>
+
+            <button
+              onClick={onExportarDados}
+              className="btn btn-success"
+              title="Exportar dados em CSV"
+            >
+              <Download size={16} />
+              Exportar CSV
+            </button>
+
+            <button
+              onClick={() => document.getElementById("import-input").click()}
+              className="btn btn-info"
+              title="Importar dados de CSV"
+            >
+              <Upload size={16} />
+              Importar CSV
+            </button>
+
+            <input
+              id="import-input"
+              type="file"
+              accept=".csv"
+              onChange={onImportarDados}
+              style={{ display: "none" }}
+            />
+
+            <button
+              onClick={onLimparDados}
+              className="btn btn-danger"
+              title="Limpar todos os dados"
+            >
+              <Trash2 size={16} />
+              Limpar
+            </button>
+          </div>
         </div>
       </div>
     </div>

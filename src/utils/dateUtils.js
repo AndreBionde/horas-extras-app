@@ -8,7 +8,7 @@ export const MESES = [
 export const DateUtils = {
   formatarData: (data) => {
     if (!data) return '';
-    const date = new Date(data + "T00:00:00"); // Forçar interpretação local
+    const date = new Date(data + "T00:00:00");
     return date.toLocaleDateString('pt-BR');
   },
 
@@ -19,7 +19,6 @@ export const DateUtils = {
   },
 
   formatarMinutos: (minutos) => {
-    // CORREÇÃO: Melhor tratamento do zero
     if (minutos === 0) return '0:00h';
     
     const horas = Math.floor(Math.abs(minutos) / 60);
@@ -35,17 +34,14 @@ export const DateUtils = {
       const entradaDate = new Date(entrada);
       const saidaDate = new Date(saida);
       
-      // Verificar se as datas são válidas
       if (isNaN(entradaDate.getTime()) || isNaN(saidaDate.getTime())) {
         return 0;
       }
       
       const diffMs = saidaDate.getTime() - entradaDate.getTime();
-      
-      // Se a diferença for negativa (saída antes da entrada), retornar 0
       if (diffMs < 0) return 0;
       
-      return Math.floor(diffMs / (1000 * 60)); // retorna minutos
+      return Math.floor(diffMs / (1000 * 60));
     } catch (error) {
       console.error('Erro ao calcular horas trabalhadas:', error);
       return 0;
@@ -61,8 +57,7 @@ export const DateUtils = {
         const data = new Date(ano, mes, dia);
         const diaSemana = data.getDay();
         
-        // 0 = Domingo, 1 = Segunda, 2 = Terça, 3 = Quarta, 4 = Quinta, 5 = Sexta, 6 = Sábado
-        // Considerando segunda a sábado (1 a 6) como dias úteis - folga apenas no domingo
+        // 0 = Domingo, 1-6 = Segunda a Sábado (dias úteis)
         if (diaSemana >= 1 && diaSemana <= 6) {
           diasUteis++;
         }
@@ -76,8 +71,27 @@ export const DateUtils = {
   },
 
   calcularHorasEsperadas: (mes, ano) => {
-    // Calcular horas esperadas baseado nos dias úteis
+    // CORREÇÃO: Calcular horas esperadas baseado nos dias úteis corretos
     const diasUteis = DateUtils.obterDiasUteis(mes, ano);
-    return diasUteis * (7 * 60); // 7 horas por dia em minutos
+    return diasUteis * JORNADA_PADRAO; // 7 horas por dia útil em minutos
+  },
+
+  // Nova funcionalidade: validação de horários
+  validarHorarios: (entrada, saida) => {
+    if (!entrada || !saida) return { valido: true, mensagem: '' };
+    
+    const entradaDate = new Date(entrada);
+    const saidaDate = new Date(saida);
+    
+    if (saidaDate <= entradaDate) {
+      return { valido: false, mensagem: 'Horário de saída deve ser posterior ao de entrada' };
+    }
+    
+    const horasTrabalhadas = DateUtils.calcularHorasTrabalhadas(entrada, saida);
+    if (horasTrabalhadas > 12 * 60) { // Mais de 12 horas
+      return { valido: false, mensagem: 'Jornada superior a 12 horas detectada' };
+    }
+    
+    return { valido: true, mensagem: '' };
   }
 };
