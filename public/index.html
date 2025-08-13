@@ -1,20 +1,54 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
+    <!-- Meta tags essenciais -->
     <meta charset="utf-8" />
+    
+    <!-- Ícone da aplicação na aba do navegador -->
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    
+    <!-- Configuração de viewport para responsividade mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+    <!-- Cor do tema para browsers móveis -->
     <meta name="theme-color" content="#667eea" />
+    
+    <!-- Descrição da aplicação para SEO -->
     <meta
       name="description"
       content="Aplicação para controle de horas extras e gestão de jornada de trabalho"
     />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Meta tags para SEO -->
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Controle de Horas Extras" />
+    <meta name="keywords" content="horas extras, controle de ponto, jornada de trabalho, gestão de tempo" />
+    
+    <!-- Título da aplicação -->
     <title>Controle de Horas Extras</title>
   </head>
   <body>
-    <noscript>Você precisa habilitar o JavaScript para executar esta aplicação.</noscript>
+    <!-- Mensagem para usuários com JavaScript desabilitado -->
+    <noscript>
+      <div style="
+        text-align: center; 
+        padding: 2rem; 
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+      ">
+        <h2 style="margin-bottom: 1rem; font-size: 1.5rem;">JavaScript Necessário</h2>
+        <p style="margin-bottom: 0.5rem;">Você precisa habilitar o JavaScript para executar esta aplicação.</p>
+        <p>Por favor, verifique as configurações do seu navegador.</p>
+      </div>
+    </noscript>
+    
+    <!-- Container principal onde a aplicação React será renderizada -->
     <div id="root"></div>
   </body>
 </html>

@@ -1,418 +1,171 @@
-import React, { useState, useEffect, useMemo } from "react";
-import Header from "./components/Header";
-import SummaryCard from "./components/SummaryCard";
-import Controls from "./components/Controls";
-import RegistrosTable from "./components/RegistrosTable";
 import { DateUtils } from "./utils/dateUtils";
-import { JORNADA_PADRAO } from "./utils/dateUtils";
+import { useData } from "./hooks/useData";
+import { DataService } from "./services/dataService";
+import { Header } from "./components/Header";
+import { SummaryCard } from "./components/SummaryCard";
+import { Controls } from "./components/Controls";
+import { Dashboard } from "./components/Dashboard";
+import { RegistrosTable } from "./components/RegistrosTable";
 
+/**
+ * Aplicação Principal - Sistema de Controle de Horas Extras
+ *
+ * Componente raiz que orquestra toda a aplicação:
+ * - Gerencia estado global através do hook useData
+ * - Coordena comunicação entre componentes
+ * - Implementa layout principal responsivo
+ * - Suporte a múltiplas escalas de trabalho
+ *
+ */
 const App = () => {
-  const [registros, setRegistros] = useState([]);
-  const [mesAtual, setMesAtual] = useState(new Date().getMonth());
-  const [anoAtual, setAnoAtual] = useState(new Date().getFullYear());
-  const [carregamentoInicial, setCarregamentoInicial] = useState(true);
+  // ===============================
+  // HOOKS E ESTADO GLOBAL
+  // ===============================
 
-  // Carregar dados do localStorage
-  useEffect(() => {
-    const dados = localStorage.getItem("registrosHorasExtras");
-    if (dados) {
-      try {
-        const registrosSalvos = JSON.parse(dados);
-        console.log("Carregando do localStorage:", registrosSalvos);
-        setRegistros(Array.isArray(registrosSalvos) ? registrosSalvos : []);
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-        setRegistros([]);
-      }
-    }
-    setCarregamentoInicial(false);
-  }, []);
+  /**
+   * Hook personalizado para gerenciamento de dados
+   *
+   * Centraliza toda lógica de estado, persistência e cálculos:
+   * - registros: Array com todos os registros de ponto
+   * - registrosMes: Registros filtrados pelo período atual
+   * - resumo: Métricas calculadas (horas extras, débitos, etc.)
+   * - escalaAtual: Escala de trabalho selecionada
+   */
+  const {
+    registros,
+    setRegistros,
+    mesAtual,
+    setMesAtual,
+    anoAtual,
+    setAnoAtual,
+    escalaAtual,
+    setEscalaAtual,
+    registrosMes,
+    resumo,
+  } = useData();
 
-  // Salvar no localStorage sempre que registros mudarem
-  useEffect(() => {
-    if (!carregamentoInicial) {
-      console.log("Salvando no localStorage:", registros);
-      localStorage.setItem("registrosHorasExtras", JSON.stringify(registros));
-    }
-  }, [registros, carregamentoInicial]);
+  // ===============================
+  // HANDLERS DE AÇÕES
+  // ===============================
 
-  // Filtrar registros do mês atual
-  const registrosMes = useMemo(() => {
-    const filtrados = registros
-      .filter((reg) => {
-        const data = new Date(reg.data + "T00:00:00");
-        const registroMes = data.getMonth();
-        const registroAno = data.getFullYear();
-
-        return registroMes === mesAtual && registroAno === anoAtual;
-      })
-      .sort((a, b) => new Date(a.data) - new Date(b.data));
-
-    return filtrados;
-  }, [registros, mesAtual, anoAtual]);
-
-  // Calcular resumo do mês
-  const resumo = useMemo(() => {
-    let totalExtras = 0;
-    let totalDebito = 0;
-    let horasTrabalhadasTotal = 0;
-
-    registrosMes.forEach((registro) => {
-      const horasTrabalhadas = DateUtils.calcularHorasTrabalhadas(
-        registro.entrada,
-        registro.saida
-      );
-      horasTrabalhadasTotal += horasTrabalhadas;
-      const diferenca = horasTrabalhadas - JORNADA_PADRAO;
-
-      if (horasTrabalhadas > 0) {
-        if (diferenca > 0) {
-          totalExtras += diferenca;
-        } else if (diferenca < 0) {
-          totalDebito += Math.abs(diferenca);
-        }
-      }
-    });
-
-    const diasUteis = DateUtils.obterDiasUteis(mesAtual, anoAtual);
-    const horasEsperadas = DateUtils.calcularHorasEsperadas(mesAtual, anoAtual);
-
-    const percentualCumprido =
-      horasEsperadas > 0
-        ? ((horasTrabalhadasTotal / horasEsperadas) * 100).toFixed(1)
-        : 0;
-
-    return {
-      totalExtras,
-      totalDebito,
-      saldoFinal: totalExtras - totalDebito,
-      horasTrabalhadasTotal,
-      diasUteis,
-      diasTrabalhados: registrosMes.length,
-      horasEsperadas,
-      percentualCumprido,
-    };
-  }, [registrosMes, mesAtual, anoAtual]);
-
-  const adicionarRegistro = () => {
-    if (resumo.diasTrabalhados >= resumo.diasUteis) {
-      alert(
-        `Você já atingiu o limite de ${resumo.diasUteis} dias úteis para este mês.`
-      );
-      return;
-    }
-
-    const hoje = new Date();
-    const ehMesAtual =
-      mesAtual === hoje.getMonth() && anoAtual === hoje.getFullYear();
-
-    let dataParaUsar;
-    if (ehMesAtual) {
-      dataParaUsar = hoje;
-    } else {
-      dataParaUsar = new Date(anoAtual, mesAtual, 1);
-    }
-
-    const dataFormatada = dataParaUsar.toISOString().split("T")[0];
-
-    const novoRegistro = {
-      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      data: dataFormatada,
-      entrada: "",
-      saida: "",
-    };
-
-    setRegistros((prev) => [...prev, novoRegistro]);
-  };
-
-  const removerRegistro = (id) => {
-    if (window.confirm("Tem certeza que deseja excluir este registro?")) {
-      setRegistros((prev) => prev.filter((reg) => reg.id !== id));
-    }
-  };
-
-  const atualizarRegistro = (id, campo, valor) => {
-    setRegistros((prev) =>
-      prev.map((reg) => (reg.id === id ? { ...reg, [campo]: valor } : reg))
+  /**
+   * Adiciona novo registro de dia trabalhado
+   *
+   * Valida limites de dias úteis antes da criação
+   */
+  const adicionarRegistro = () =>
+    DataService.adicionarRegistro(
+      registros,
+      setRegistros,
+      resumo,
+      mesAtual,
+      anoAtual,
+      escalaAtual
     );
-  };
 
-  const handleTimeChange = (id, campo, valor) => {
-    if (valor) {
-      const registro = registros.find((r) => r.id === id);
-      if (registro) {
-        const [hours, minutes] = valor.split(":");
-        const dataCompleta = new Date(registro.data + "T00:00:00");
-        dataCompleta.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+  /**
+   * Remove registro específico
+   *
+   * @param {string} id - ID único do registro
+   */
+  const removerRegistro = (id) => DataService.removerRegistro(setRegistros, id);
 
-        atualizarRegistro(id, campo, dataCompleta.toISOString());
-      }
-    } else {
-      atualizarRegistro(id, campo, "");
-    }
-  };
+  /**
+   * Atualiza campo específico de um registro
+   *
+   * @param {string} id - ID do registro
+   * @param {string} campo - Nome do campo (data, entrada, saida)
+   * @param {any} valor - Novo valor para o campo
+   */
+  const atualizarRegistro = (id, campo, valor) =>
+    DataService.atualizarRegistro(setRegistros, id, campo, valor);
 
-  // NOVA FUNÇÃO - Exportar para CSV
-  const exportarDados = () => {
-    try {
-      // Cabeçalho do CSV
-      const cabecalho = [
-        "Data",
-        "Entrada",
-        "Saída",
-        "Horas Trabalhadas",
-        "Diferença da Jornada",
-        "Status",
-      ];
+  /**
+   * Manipula mudanças em campos de horário (entrada/saída)
+   *
+   * Converte formato de time input para ISO string
+   *
+   * @param {string} id - ID do registro
+   * @param {string} campo - "entrada" ou "saida"
+   * @param {string} valor - Horário no formato HH:MM
+   */
+  const handleTimeChange = (id, campo, valor) =>
+    DataService.handleTimeChange(registros, setRegistros, id, campo, valor);
 
-      // Converter registros para linhas CSV
-      const linhasCSV = registros.map((registro) => {
-        const horasTrabalhadas = DateUtils.calcularHorasTrabalhadas(
-          registro.entrada,
-          registro.saida
-        );
+  /**
+   * Gera relatório PDF do período atual
+   */
+  const gerarPDF = () =>
+    DataService.gerarPDF(registrosMes, resumo, mesAtual, anoAtual, escalaAtual);
 
-        const diferenca =
-          horasTrabalhadas > 0 ? horasTrabalhadas - JORNADA_PADRAO : 0;
+  /**
+   * Exporta dados para arquivo CSV
+   */
+  const exportarDados = () =>
+    DataService.exportarDados(registros, resumo, escalaAtual);
 
-        let status = "Normal";
-        if (diferenca > 0) status = "Hora Extra";
-        if (diferenca < 0) status = "Débito";
-        if (horasTrabalhadas === 0) status = "Sem Registro";
+  /**
+   * Importa dados de arquivo CSV
+   *
+   * @param {Event} event - Evento do input file
+   */
+  const importarDados = (event) =>
+    DataService.importarDados(setRegistros, event);
 
-        return [
-          DateUtils.formatarData(registro.data),
-          registro.entrada ? DateUtils.formatarHora(registro.entrada) : "",
-          registro.saida ? DateUtils.formatarHora(registro.saida) : "",
-          horasTrabalhadas > 0
-            ? DateUtils.formatarMinutos(horasTrabalhadas)
-            : "0:00h",
-          horasTrabalhadas > 0 ? DateUtils.formatarMinutos(diferenca) : "0:00h",
-          status,
-        ];
-      });
+  /**
+   * Remove todos os dados da aplicação
+   *
+   * Inclui confirmações de segurança
+   */
+  const limparDados = () => DataService.limparDados(setRegistros);
 
-      // Adicionar linha de resumo
-      const resumoLinha = [
-        "--- RESUMO DO PERÍODO ---",
-        "",
-        "",
-        DateUtils.formatarMinutos(resumo.horasTrabalhadasTotal),
-        DateUtils.formatarMinutos(resumo.saldoFinal),
-        `${resumo.diasTrabalhados}/${resumo.diasUteis} dias`,
-      ];
-
-      // Combinar tudo
-      const todasLinhas = [cabecalho, ...linhasCSV, [""], resumoLinha];
-
-      // Converter para texto CSV
-      const csvContent = todasLinhas
-        .map((linha) => linha.map((campo) => `"${campo}"`).join(","))
-        .join("\n");
-
-      // Criar e baixar arquivo
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = `horas-extras-${
-        new Date().toISOString().split("T")[0]
-      }.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      alert("Dados exportados com sucesso em formato CSV!");
-    } catch (error) {
-      console.error("Erro ao exportar CSV:", error);
-      alert("Erro ao exportar dados. Tente novamente.");
-    }
-  };
-
-  // NOVA FUNÇÃO - Importar de CSV
-  const importarDados = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      alert("Por favor, selecione um arquivo CSV válido.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const csvContent = e.target.result;
-        const linhas = csvContent.split("\n");
-
-        if (linhas.length < 2) {
-          alert("Arquivo CSV vazio ou inválido.");
-          return;
-        }
-
-        const cabecalho = linhas[0]
-          .split(",")
-          .map((col) => col.replace(/"/g, "").trim());
-
-        // Verificar se tem as colunas esperadas
-        const colunasEsperadas = ["Data", "Entrada", "Saída"];
-        const temColunasBasicas = colunasEsperadas.some((col) =>
-          cabecalho.some((header) => header.includes(col))
-        );
-
-        if (!temColunasBasicas) {
-          alert(
-            "Arquivo CSV não possui as colunas esperadas (Data, Entrada, Saída)."
-          );
-          return;
-        }
-
-        // Processar linhas de dados
-        const registrosImportados = [];
-
-        for (let i = 1; i < linhas.length; i++) {
-          const linha = linhas[i].trim();
-          if (!linha || linha.startsWith("---") || linha.includes("RESUMO"))
-            continue;
-
-          const campos = linha
-            .split(",")
-            .map((campo) => campo.replace(/"/g, "").trim());
-
-          if (campos.length >= 3 && campos[0] && !campos[0].startsWith("---")) {
-            try {
-              // Converter data
-              let dataFormatada = campos[0];
-              if (dataFormatada.includes("/")) {
-                const [dia, mes, ano] = dataFormatada.split("/");
-                dataFormatada = `${ano}-${mes.padStart(2, "0")}-${dia.padStart(
-                  2,
-                  "0"
-                )}`;
-              }
-
-              // Converter horários
-              const entradaStr = campos[1];
-              const saidaStr = campos[2];
-
-              let entradaISO = "";
-              let saidaISO = "";
-
-              if (entradaStr && entradaStr !== "") {
-                const [horaE, minE] = entradaStr
-                  .split(":")
-                  .map((x) => parseInt(x));
-                if (!isNaN(horaE) && !isNaN(minE)) {
-                  const entradaDate = new Date(dataFormatada + "T00:00:00");
-                  entradaDate.setHours(horaE, minE, 0, 0);
-                  entradaISO = entradaDate.toISOString();
-                }
-              }
-
-              if (saidaStr && saidaStr !== "") {
-                const [horaS, minS] = saidaStr
-                  .split(":")
-                  .map((x) => parseInt(x));
-                if (!isNaN(horaS) && !isNaN(minS)) {
-                  const saidaDate = new Date(dataFormatada + "T00:00:00");
-                  saidaDate.setHours(horaS, minS, 0, 0);
-                  saidaISO = saidaDate.toISOString();
-                }
-              }
-
-              registrosImportados.push({
-                id: `${Date.now()}_${Math.random()
-                  .toString(36)
-                  .substr(2, 9)}_${i}`,
-                data: dataFormatada,
-                entrada: entradaISO,
-                saida: saidaISO,
-              });
-            } catch (error) {
-              console.warn(`Erro na linha ${i + 1}:`, error);
-              continue;
-            }
-          }
-        }
-
-        if (registrosImportados.length === 0) {
-          alert("Nenhum registro válido encontrado no arquivo CSV.");
-          return;
-        }
-
-        if (
-          window.confirm(
-            `Foram encontrados ${registrosImportados.length} registros válidos.\n` +
-              `Deseja substituir todos os dados atuais pelos dados importados?`
-          )
-        ) {
-          setRegistros(registrosImportados);
-          alert(
-            `${registrosImportados.length} registros importados com sucesso!`
-          );
-        }
-      } catch (error) {
-        console.error("Erro ao processar CSV:", error);
-        alert(
-          "Erro ao processar arquivo CSV. Verifique o formato e tente novamente."
-        );
-      }
-    };
-
-    reader.readAsText(file);
-    event.target.value = "";
-  };
-
-  const limparDados = () => {
-    if (
-      window.confirm(
-        "Tem certeza que deseja limpar TODOS os dados? Esta ação não pode ser desfeita."
-      )
-    ) {
-      if (
-        window.confirm(
-          "ATENÇÃO: Todos os registros serão perdidos permanentemente. Confirma?"
-        )
-      ) {
-        setRegistros([]);
-        localStorage.removeItem("registrosHorasExtras");
-        alert("Todos os dados foram removidos.");
-      }
-    }
-  };
+  // ===============================
+  // RENDER PRINCIPAL
+  // ===============================
 
   return (
     <div className="app-container">
+      {/* Cabeçalho com branding */}
       <Header />
 
+      {/* Container principal com layout responsivo */}
       <div className="main-container">
+        {/* Painel de controles com seletor de escala */}
         <Controls
           mesAtual={mesAtual}
           setMesAtual={setMesAtual}
           anoAtual={anoAtual}
           setAnoAtual={setAnoAtual}
+          escalaAtual={escalaAtual}
+          setEscalaAtual={setEscalaAtual}
           onAdicionarRegistro={adicionarRegistro}
           diasTrabalhados={resumo.diasTrabalhados}
           onExportarDados={exportarDados}
           onImportarDados={importarDados}
           onLimparDados={limparDados}
+          onGerarPDF={gerarPDF}
+          diasUteis={resumo.diasUteis}
         />
 
+        {/* Grid de cards de resumo */}
         <div className="summary-grid">
+          {/* Card: Horas Extras */}
           <SummaryCard
             title="Horas Extras"
             value={DateUtils.formatarMinutos(resumo.totalExtras)}
             type="positive"
+            icon="trend-up"
           />
 
+          {/* Card: Horas em Débito */}
           <SummaryCard
             title="Horas em Débito"
             value={DateUtils.formatarMinutos(resumo.totalDebito)}
             type="negative"
+            icon="trend-down"
           />
 
+          {/* Card: Saldo Final */}
           <SummaryCard
             title="Saldo Final"
             value={DateUtils.formatarMinutos(resumo.saldoFinal)}
@@ -423,8 +176,10 @@ const App = () => {
                 ? "negative"
                 : "neutral"
             }
+            icon="activity"
           />
 
+          {/* Card: Dias Trabalhados */}
           <SummaryCard
             title="Dias Trabalhados"
             value={`${resumo.diasTrabalhados}/${resumo.diasUteis}`}
@@ -432,6 +187,7 @@ const App = () => {
             icon="calendar"
           />
 
+          {/* Card: Total Trabalhado */}
           <SummaryCard
             title="Total Trabalhado"
             value={DateUtils.formatarMinutos(resumo.horasTrabalhadasTotal)}
@@ -440,20 +196,34 @@ const App = () => {
             subtitle={`${resumo.percentualCumprido}% da meta mensal`}
           />
 
+          {/* Card: Horas Esperadas com info da escala */}
           <SummaryCard
             title="Horas Esperadas"
             value={DateUtils.formatarMinutos(resumo.horasEsperadas)}
             type="neutral"
             icon="chart"
-            subtitle={`Meta do mês (${JORNADA_PADRAO / 60}h/dia)`}
+            subtitle={`Meta: ${
+              resumo.escalaInfo?.horasPorDia / 60 || 7
+            }h/dia (${resumo.escalaInfo?.nome || "Padrão"})`}
           />
         </div>
 
+        {/* Dashboard com gráficos interativos */}
+        <Dashboard
+          dados={registrosMes}
+          resumo={resumo}
+          mes={mesAtual}
+          ano={anoAtual}
+          escalaAtual={escalaAtual}
+        />
+
+        {/* Tabela de registros detalhados */}
         <RegistrosTable
           registrosMes={registrosMes}
           onAtualizarRegistro={atualizarRegistro}
           onRemoverRegistro={removerRegistro}
           onHandleTimeChange={handleTimeChange}
+          escalaAtual={escalaAtual}
         />
       </div>
     </div>
